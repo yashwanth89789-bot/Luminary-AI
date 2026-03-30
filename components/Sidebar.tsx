@@ -122,9 +122,39 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {/* AI Summary Card */}
             {summary && (
               <div className="bg-gradient-to-br from-indigo-900/40 to-purple-900/40 border border-indigo-500/30 rounded-xl p-4 shadow-sm">
-                <div className="flex items-center gap-2 mb-2 text-indigo-300">
-                  <Sparkles className="w-4 h-4" />
-                  <h3 className="text-xs font-bold uppercase tracking-wider">AI Summary</h3>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2 text-indigo-300">
+                    <Sparkles className="w-4 h-4" />
+                    <h3 className="text-xs font-bold uppercase tracking-wider">AI Summary</h3>
+                  </div>
+                  <button
+                    onClick={() => {
+                      let markdown = `# Analysis Results\n\n## Summary\n${summary}\n\n`;
+                      if (highlights.length > 0) {
+                        markdown += `## Highlights\n\n`;
+                        categoriesOrder.forEach(cat => {
+                          const items = groupedHighlights[cat];
+                          if (items?.length) {
+                            markdown += `### ${MODES[cat].label}\n`;
+                            items.forEach(h => {
+                              markdown += `- "${h.text}"\n`;
+                            });
+                            markdown += `\n`;
+                          }
+                        });
+                      }
+                      const blob = new Blob([markdown], { type: 'text/markdown' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `delight-analysis-${Date.now()}.md`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="text-xs text-indigo-300 hover:text-white flex items-center gap-1"
+                  >
+                    <FileText className="w-3 h-3" /> Export
+                  </button>
                 </div>
                 <p className="text-sm text-gray-300 leading-relaxed">
                   {summary}

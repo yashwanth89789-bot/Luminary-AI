@@ -78,6 +78,82 @@ export const analyzeTextWithGemini = async (text: string): Promise<AIAnalysisRes
   }
 };
 
+export const analyzeImageWithGemini = async (
+  mimeType: string,
+  base64Data: string
+): Promise<AIAnalysisResult> => {
+  if (!process.env.API_KEY) {
+    throw new Error("API Key is missing.");
+  }
+
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+  const prompt = `
+    Analyze the following image.
+    1. Write a concise, high-level summary (max 3 sentences) capturing the core essence of the image.
+    2. Extract the most significant insights, facts, or action items from the image and categorize them into:
+       - IMPORTANT (Key insights, main ideas)
+       - FACT (Statistics, specific data points, dates, definitions)
+       - ACTION (Instructions, next steps, to-dos)
+       - WARNING (Risks, caveats, critical alerts)
+
+    Return a JSON object with 'summary' and 'highlights'.
+    For highlights, 'quote' MUST be a short phrase or sentence that is explicitly present in the 'summary' text.
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: [
+        {
+          inlineData: {
+            mimeType: mimeType,
+            data: base64Data,
+          },
+        },
+        { text: prompt },
+      ],
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            summary: { type: Type.STRING },
+            highlights: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  quote: { type: Type.STRING },
+                  category: { 
+                    type: Type.STRING, 
+                    enum: [
+                      HighlightCategory.IMPORTANT, 
+                      HighlightCategory.FACT, 
+                      HighlightCategory.ACTION, 
+                      HighlightCategory.WARNING
+                    ] 
+                  },
+                  explanation: { type: Type.STRING }
+                },
+                required: ["quote", "category"]
+              }
+            }
+          }
+        }
+      }
+    });
+
+    const resultText = response.text;
+    if (!resultText) return { summary: "", highlights: [] };
+    
+    return JSON.parse(resultText) as AIAnalysisResult;
+  } catch (error) {
+    console.error("Gemini Analysis Error:", error);
+    throw error;
+  }
+};
+
 export const chatWithDocument = async (
   documentText: string, 
   question: string, 

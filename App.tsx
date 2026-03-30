@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { 
   Wand2, 
   FileText, 
@@ -7,9 +7,10 @@ import {
   X,
   Palette,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  Image as ImageIcon
 } from 'lucide-react';
-import { analyzeTextWithGemini, chatWithDocument } from './services/geminiService';
+import { analyzeTextWithGemini, chatWithDocument, analyzeImageWithGemini } from './services/geminiService';
 import { HighlightRenderer } from './components/HighlightRenderer';
 import { Sidebar } from './components/Sidebar';
 import { MODES, INITIAL_TEXT, PALETTES } from './constants';
@@ -45,7 +46,7 @@ const LandingPage = ({ onStart }: { onStart: () => void }) => (
       <div className="space-y-6">
         <h1 className="text-5xl md:text-7xl font-bold tracking-tight">
           <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-200 via-white to-purple-200">
-            Luminary
+            Delight
           </span>
         </h1>
         <p className="text-xl md:text-2xl text-slate-400 max-w-2xl mx-auto leading-relaxed font-light">
@@ -112,6 +113,47 @@ export default function App() {
   const [isEditMode, setIsEditMode] = useState<boolean>(false);
   const [processing, setProcessing] = useState<ProcessingState>({ isAnalyzing: false, error: null });
   const [isChatLoading, setIsChatLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64Data = (reader.result as string).split(',')[1];
+      setProcessing({ isAnalyzing: true, error: null });
+      try {
+        const result = await analyzeImageWithGemini(file.type, base64Data);
+        setText(result.summary);
+        setSummary(result.summary);
+        
+        // Map highlights to the summary text
+        const newHighlights: Highlight[] = [];
+        for (const res of result.highlights) {
+          const index = result.summary.indexOf(res.quote, 0); 
+          
+          if (index !== -1) {
+            const end = index + res.quote.length;
+            newHighlights.push({
+              id: generateId(),
+              text: res.quote,
+              category: res.category,
+              startIndex: index,
+              endIndex: end,
+              note: res.explanation
+            });
+          }
+        }
+        setHighlights(newHighlights);
+      } catch (err) {
+        setProcessing({ isAnalyzing: false, error: "Failed to analyze image." });
+      } finally {
+        setProcessing(prev => ({ ...prev, isAnalyzing: false }));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
   
   // Selection State
   const [selectedText, setSelectedText] = useState<{ text: string; start: number; end: number } | null>(null);
@@ -405,11 +447,25 @@ export default function App() {
             <Wand2 className="text-white w-5 h-5" />
           </div>
           <h1 className="font-bold text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-200 to-purple-200">
-            Luminary
+            Delight
           </h1>
         </div>
 
         <div className="flex items-center gap-4">
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            ref={fileInputRef}
+            onChange={handleImageUpload}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="p-2 rounded-full bg-gray-800 hover:bg-gray-700 text-gray-300 transition-colors"
+            title="Upload Image"
+          >
+            <ImageIcon className="w-5 h-5" />
+          </button>
           <div className="relative">
             <button
               onClick={() => setShowThemeMenu(!showThemeMenu)}
