@@ -58,7 +58,7 @@ export const PALETTES: Record<string, ThemePalette> = {
   }
 };
 
-export const INITIAL_TEXT = `Welcome to Delight AI Highlighter.
+export const INITIAL_TEXT = `Welcome to D-Light AI Highlighter.
 
 Artificial Intelligence is reshaping how we process information. According to recent studies, AI tools can increase reading comprehension speed by up to 40% when key information is visually segmented.
 

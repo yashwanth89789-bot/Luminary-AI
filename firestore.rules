@@ -1,0 +1,107 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Fields: uid, email, displayName, photoURL, createdAt
+    //
+    // Collection: projects
+    // Fields: id, name, description, ownerId, createdAt, updatedAt
+    //
+    // Collection: documents (subcollection of projects)
+    // Fields: id, projectId, title, content, ownerId, createdAt, updatedAt
+    //
+    // Collection: chunks (subcollection of projects)
+    // Fields: id, documentId, projectId, text, embedding, ownerId, chunkIndex
+    //
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "yashwanth89789@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isDocOwner(data) {
+      return isAuthenticated() && request.auth.uid == data.ownerId;
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email']) &&
+             data.uid is string &&
+             data.email is string &&
+             data.email.size() < 256;
+    }
+
+    function isValidProject(data) {
+      return data.keys().hasAll(['id', 'name', 'ownerId']) &&
+             data.id is string &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.ownerId == request.auth.uid;
+    }
+
+    function isValidDocument(data) {
+      return data.keys().hasAll(['id', 'projectId', 'title', 'content', 'ownerId']) &&
+             data.id is string &&
+             data.projectId is string &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.content is string && data.content.size() < 1000000 &&
+             data.ownerId == request.auth.uid;
+    }
+
+    function isValidChunk(data) {
+      return data.keys().hasAll(['id', 'documentId', 'projectId', 'text', 'embedding', 'ownerId']) &&
+             data.id is string &&
+             data.documentId is string &&
+             data.projectId is string &&
+             data.text is string && data.text.size() < 5000 &&
+             data.embedding is list && data.embedding.size() > 0 &&
+             data.ownerId == request.auth.uid;
+    }
+
+    // Rules
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create: if isOwner(uid) && isValidUser(request.resource.data);
+      allow update: if isOwner(uid) && isValidUser(request.resource.data) && 
+                    request.resource.data.uid == resource.data.uid;
+    }
+
+    match /projects/{projectId} {
+      allow read: if isDocOwner(resource.data) || isAdmin();
+      allow create: if isAuthenticated() && isValidProject(request.resource.data);
+      allow update: if isDocOwner(resource.data) && isValidProject(request.resource.data) &&
+                    request.resource.data.ownerId == resource.data.ownerId;
+      allow delete: if isDocOwner(resource.data) || isAdmin();
+
+      match /documents/{documentId} {
+        allow read: if isDocOwner(resource.data) || isAdmin();
+        allow create: if isAuthenticated() && isValidDocument(request.resource.data);
+        allow update: if isDocOwner(resource.data) && isValidDocument(request.resource.data) &&
+                      request.resource.data.ownerId == resource.data.ownerId;
+        allow delete: if isDocOwner(resource.data) || isAdmin();
+      }
+
+      match /chunks/{chunkId} {
+        allow read: if isDocOwner(resource.data) || isAdmin();
+        allow create: if isAuthenticated() && isValidChunk(request.resource.data);
+        allow update: if isDocOwner(resource.data) && isValidChunk(request.resource.data) &&
+                      request.resource.data.ownerId == resource.data.ownerId;
+        allow delete: if isDocOwner(resource.data) || isAdmin();
+      }
+    }
+  }
+}

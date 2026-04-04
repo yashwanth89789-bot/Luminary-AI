@@ -190,3 +190,62 @@ export const chatWithDocument = async (
 
   return response.text || "I couldn't generate a response.";
 };
+
+export const generateEmbeddings = async (text: string): Promise<number[]> => {
+  if (!process.env.API_KEY) throw new Error("API Key is missing.");
+
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+  try {
+    const result = await ai.models.embedContent({
+      model: 'gemini-embedding-2-preview',
+      contents: [text],
+    });
+
+    if (!result.embeddings || result.embeddings.length === 0) {
+      throw new Error("No embeddings generated.");
+    }
+    const values = result.embeddings[0].values;
+    if (!values) throw new Error("Embedding values are missing.");
+    return values;
+  } catch (error) {
+    console.error("Gemini Embedding Error:", error);
+    throw error;
+  }
+};
+
+export const chatWithKnowledgeBase = async (
+  context: string,
+  question: string,
+  history: ChatMessage[]
+): Promise<string> => {
+  if (!process.env.API_KEY) throw new Error("API Key is missing.");
+
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  
+  const chatHistory = history.slice(-10).map(msg => `${msg.role}: ${msg.text}`).join('\n');
+
+  const prompt = `
+    You are a helpful assistant analyzing a knowledge base of multiple documents.
+    
+    Retrieved Context:
+    """
+    ${context}
+    """
+
+    Chat History:
+    ${chatHistory}
+
+    User Question: ${question}
+
+    Answer the user's question based on the provided context from the knowledge base. 
+    If the answer is not in the context, say so. Be professional and helpful.
+  `;
+
+  const response = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: prompt
+  });
+
+  return response.text || "I couldn't generate a response.";
+};

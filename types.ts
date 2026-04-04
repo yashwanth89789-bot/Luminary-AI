@@ -8,6 +8,35 @@ export enum HighlightCategory {
   CUSTOM = 'CUSTOM'
 }
 
+export interface Project {
+  id: string;
+  name: string;
+  description?: string;
+  ownerId: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface Document {
+  id: string;
+  projectId: string;
+  title: string;
+  content: string;
+  ownerId: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface Chunk {
+  id: string;
+  documentId: string;
+  projectId: string;
+  text: string;
+  embedding: number[];
+  ownerId: string;
+  chunkIndex: number;
+}
+
 export interface Highlight {
   id: string;
   text: string;

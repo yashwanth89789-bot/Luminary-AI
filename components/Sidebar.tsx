@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Highlight, HighlightCategory, ThemePalette, SavedDocument, ChatMessage } from '../types';
 import { MODES } from '../constants';
-import { Trash2, ExternalLink, History, Layers, Plus, FileText, Clock, MessageSquare, Send, Sparkles, Bot } from 'lucide-react';
+import { Trash2, ExternalLink, History, Layers, Plus, FileText, Clock, MessageSquare, Send, Sparkles, Bot, FolderOpen } from 'lucide-react';
 
 interface SidebarProps {
   highlights: Highlight[];
@@ -21,6 +21,11 @@ interface SidebarProps {
   onSelectDocument: (id: string) => void;
   onDeleteDocument: (id: string) => void;
   onCreateDocument: () => void;
+
+  // Knowledge Base Props
+  activeProjectId: string | null;
+  projectDocuments: any[]; // Using any for now to avoid complex type issues in this step
+  initialTab?: 'highlights' | 'chat' | 'history' | 'kb';
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
@@ -36,11 +41,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeDocId,
   onSelectDocument,
   onDeleteDocument,
-  onCreateDocument
+  onCreateDocument,
+  activeProjectId,
+  projectDocuments,
+  initialTab
 }) => {
-  const [activeTab, setActiveTab] = useState<'highlights' | 'chat' | 'history'>('highlights');
+  const [activeTab, setActiveTab] = useState<'highlights' | 'chat' | 'history' | 'kb'>(initialTab || 'highlights');
   const [chatInput, setChatInput] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Sync activeTab with initialTab prop (for mobile navigation)
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
 
   // Auto-scroll chat
   useEffect(() => {
@@ -110,6 +125,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <History className="w-4 h-4" />
           <span>History</span>
         </button>
+        {activeProjectId && (
+          <button
+            onClick={() => setActiveTab('kb')}
+            className={`flex-1 py-3 text-xs font-medium flex flex-col items-center justify-center gap-1 border-b-2 transition-colors ${
+              activeTab === 'kb' 
+                ? 'border-blue-500 text-blue-400 bg-gray-800/30' 
+                : 'border-transparent text-gray-400 hover:text-gray-200 hover:bg-gray-800/20'
+            }`}
+          >
+            <FolderOpen className="w-4 h-4" />
+            <span>KB</span>
+          </button>
+        )}
       </div>
 
       {/* Content Area */}
@@ -356,6 +384,49 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </div>
                 );
               })}
+            </div>
+          </div>
+        )}
+
+        {/* KNOWLEDGE BASE VIEW */}
+        {activeTab === 'kb' && (
+          <div className="space-y-4 animate-in fade-in slide-in-from-left-4 duration-300">
+            <div className="bg-blue-600/10 border border-blue-500/30 rounded-xl p-4 mb-4">
+              <div className="flex items-center gap-2 text-blue-300 mb-2">
+                <FolderOpen className="w-4 h-4" />
+                <h3 className="text-xs font-bold uppercase tracking-wider">Active Knowledge Base</h3>
+              </div>
+              <p className="text-xs text-gray-400">
+                All documents listed below are indexed and searchable via the AI Chat.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              {projectDocuments.length === 0 ? (
+                <div className="text-center py-10 text-gray-500">
+                  <p className="text-sm">No documents in this project yet.</p>
+                  <p className="text-xs mt-1">Add documents to start building your knowledge base.</p>
+                </div>
+              ) : (
+                projectDocuments.map((doc) => (
+                  <div 
+                    key={doc.id}
+                    className="p-3 rounded-lg border border-gray-700 bg-background/50 flex items-center gap-3"
+                  >
+                    <div className="p-1.5 rounded-md bg-gray-800 text-gray-400">
+                      <FileText className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-sm font-medium text-gray-200 truncate">
+                        {doc.title}
+                      </h4>
+                      <p className="text-[10px] text-gray-500">
+                        Indexed on {new Date(doc.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}
