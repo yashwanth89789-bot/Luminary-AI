@@ -12,7 +12,8 @@ export interface AIAnalysisResult {
 
 export const analyzeTextWithGemini = async (text: string): Promise<AIAnalysisResult> => {
   if (!import.meta.env.VITE_API_KEY) {
-    throw new Error("API Key is missing.");
+    console.error("VITE_API_KEY is missing or undefined.");
+    throw new Error("API Key is missing. Please ensure VITE_API_KEY is set in Settings.");
   }
 
   const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_API_KEY });
