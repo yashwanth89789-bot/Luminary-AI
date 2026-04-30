@@ -11,12 +11,8 @@ export interface AIAnalysisResult {
 }
 
 export const analyzeTextWithGemini = async (text: string): Promise<AIAnalysisResult> => {
-  if (!import.meta.env.VITE_API_KEY) {
-    console.error("VITE_API_KEY is missing or undefined.");
-    throw new Error("API Key is missing. Please ensure VITE_API_KEY is set in Settings.");
-  }
-
-  const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_API_KEY });
+  const apiKey = import.meta.env.VITE_API_KEY;
+  const ai = new GoogleGenAI(apiKey ? { apiKey } : {});
 
   const prompt = `
     Analyze the following text.
@@ -83,11 +79,8 @@ export const analyzeImageWithGemini = async (
   mimeType: string,
   base64Data: string
 ): Promise<AIAnalysisResult> => {
-  if (!import.meta.env.VITE_API_KEY) {
-    throw new Error("API Key is missing.");
-  }
-
-  const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_API_KEY });
+  const apiKey = import.meta.env.VITE_API_KEY;
+  const ai = new GoogleGenAI(apiKey ? { apiKey } : {});
 
   const prompt = `
     Analyze the following image.
@@ -160,9 +153,8 @@ export const chatWithDocument = async (
   question: string, 
   history: ChatMessage[]
 ): Promise<string> => {
-  if (!import.meta.env.VITE_API_KEY) throw new Error("API Key is missing.");
-
-  const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_API_KEY });
+  const apiKey = import.meta.env.VITE_API_KEY;
+  const ai = new GoogleGenAI(apiKey ? { apiKey } : {});
   
   // Convert chat history to a simplified format for context
   const context = history.slice(-6).map(msg => `${msg.role}: ${msg.text}`).join('\n');
@@ -193,9 +185,8 @@ export const chatWithDocument = async (
 };
 
 export const generateEmbeddings = async (text: string): Promise<number[]> => {
-  if (!import.meta.env.VITE_API_KEY) throw new Error("API Key is missing.");
-
-  const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_API_KEY });
+  const apiKey = import.meta.env.VITE_API_KEY;
+  const ai = new GoogleGenAI(apiKey ? { apiKey } : {});
 
   try {
     const result = await ai.models.embedContent({
@@ -220,9 +211,8 @@ export const chatWithKnowledgeBase = async (
   question: string,
   history: ChatMessage[]
 ): Promise<string> => {
-  if (!import.meta.env.VITE_API_KEY) throw new Error("API Key is missing.");
-
-  const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_API_KEY });
+  const apiKey = import.meta.env.VITE_API_KEY;
+  const ai = new GoogleGenAI(apiKey ? { apiKey } : {});
   
   const chatHistory = history.slice(-10).map(msg => `${msg.role}: ${msg.text}`).join('\n');
 
